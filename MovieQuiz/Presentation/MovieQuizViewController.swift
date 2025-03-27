@@ -3,28 +3,12 @@ import UIKit
 final class MovieQuizViewController: UIViewController {
 
     
-    // MARK: - Lifecycle
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        
-    }
-    @IBAction func yesButtonClicked(_ sender: UIButton) {
-        let currentQuestion = questions[currentQuestionIndex]
-        let givenAnswer = true
-        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer)
-    }
-    
-    @IBAction func noButtonClicked(_ sender: UIButton) {
-        let currentQuestion = questions[currentQuestionIndex] // 1
-        let givenAnswer = false // 2
-        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer)
-    }
-    
-    
+    // MARK: - Outlets
     @IBOutlet weak var textLabel: UILabel!
     @IBOutlet weak var counterLabel: UILabel!
     @IBOutlet weak var imageView: UIImageView!
+        
+  //Mark - models
     
     struct QuizStepViewModel {
         let image: UIImage
@@ -43,6 +27,9 @@ final class MovieQuizViewController: UIViewController {
         let text: String
         let correctAnswer: Bool
     }
+    
+    
+    //Mark Данные
     
     private let questions: [Quizquestion] = [
         Quizquestion(
@@ -88,8 +75,36 @@ final class MovieQuizViewController: UIViewController {
     ]
     
     
+    //Mark - Переменные
+    
     private var currentQuestionIndex = 0
     private var correctAnswers = 0
+    
+    // Mark Life
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        showQuizStep(quiz: convert(model: questions[currentQuestionIndex]))
+    }
+    
+   //Mark Action
+    
+    @IBAction func yesButtonClicked(_ sender: UIButton) {
+        let currentQuestion = questions[currentQuestionIndex]
+        let givenAnswer = true
+        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer)
+    }
+    
+    @IBAction func noButtonClicked(_ sender: UIButton) {
+        let currentQuestion = questions[currentQuestionIndex] // 1
+        let givenAnswer = false // 2
+        showAnswerResult(isCorrect: givenAnswer == currentQuestion.correctAnswer)
+    }
+    
+    
+   
+// Mark Logic
+  
     
     private func convert(model: Quizquestion) -> QuizStepViewModel {
         let questionStep = QuizStepViewModel(
@@ -112,7 +127,10 @@ final class MovieQuizViewController: UIViewController {
         imageView.layer.masksToBounds = true // 1
         imageView.layer.borderWidth = 8 // 2
         imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor // 3
+       
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            self.imageView.layer.borderColor = UIColor.clear.cgColor
             self.showNextQuestionOrResults()
         }
     }
@@ -139,8 +157,8 @@ final class MovieQuizViewController: UIViewController {
     private func show(quiz result: QuizResultsViewModel) {
         
         let alert = UIAlertController(
-            title: "Этот Раунд Завершен",
-            message: "Ваш Результат",
+            title: result.title,
+            message: result.text,
             preferredStyle: .alert)
         
         let action = UIAlertAction(title: "Сыграть ещё раз?", style: .default) { _ in
