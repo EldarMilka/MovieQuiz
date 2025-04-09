@@ -21,20 +21,28 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     override func viewDidLoad() {
         super.viewDidLoad()
        
+        alertPresenter = AlertPresenter(viewController: self)
+        
        imageView.layer.cornerRadius = 20
         questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
     
         showLoadingIndicator()
         questionFactory?.loadData()
-    } 
+    }
+    
+    private func hideLoadingIndicator() {
+        activityIndicator.stopAnimating()
+        activityIndicator.isHidden = true
+    }
     
     func didLoadDataFromServer() {
-        activityIndicator.isHidden = true // скрываем индикатор загрузки
+        hideLoadingIndicator()
         questionFactory?.requestNextQuestion()
-    } 
+    }
 
     func didFailToLoadData(with error: Error) {
-        showNetworkError(message: error.localizedDescription) // возьмём в качестве сообщения описание ошибки
+        hideLoadingIndicator()
+        showNetworkError(message: error.localizedDescription)
     }
     
     // MARK: - QuestionFactoryDelegate
@@ -74,18 +82,29 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             self.currentQuestionIndex = 0
             self.correctAnswers = 0
             
-            self.questionFactory?.requestNextQuestion()
+            self.questionFactory?.loadData()
         }
         
-        alertPresenter.show(in: self, model: model)
-    } 
+        alertPresenter?.showAlert(with: model)
+    }
     
     
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        return QuizStepViewModel(
-                image: UIImage(data: model.image) ?? UIImage(),
+        // Если model.image это строка с URL, то конвертируем её в Data
+        if let imageData = Data(base64Encoded: model.image) {
+            return QuizStepViewModel(
+                image: UIImage(data: imageData) ?? UIImage(),
                 question: model.text,
-                questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)")
+                questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)"
+            )
+        } else {
+            // Если не удалось создать Data из строки, возвращаем пустое изображение
+            return QuizStepViewModel(
+                image: UIImage(),
+                question: model.text,
+                questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)"
+            )
+        }
     }
     
     private func showQuizStep(quiz step: QuizStepViewModel) {
