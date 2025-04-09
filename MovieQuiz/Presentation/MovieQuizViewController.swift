@@ -21,7 +21,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         super.viewDidLoad()
         
         let factory = QuestionFactory()
-        factory.delegate = self
+        factory.setup(delegate: self)
         questionFactory = factory
         
         alertPresenter = AlertPresenter(viewController: self)
