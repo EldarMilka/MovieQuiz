@@ -24,7 +24,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private let statisticService: StatisticServiceProtocol = StatisticService()
     
     // MARK: - Lifecycle
-    override func viewDidLoad() {
+   override func viewDidLoad() {
         super.viewDidLoad()
         
         alertPresenter = AlertPresenter(viewController: self)
@@ -35,7 +35,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         showLoadingIndicator()
         questionFactory?.loadData()
     }
-    
+  
     private func hideLoadingIndicator() {
         activityIndicator.stopAnimating()
         activityIndicator.isHidden = true
@@ -70,11 +70,11 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     // MARK: - Actions
-    @IBAction func yesButtonClicked(_ sender: UIButton) {
+    @IBAction private func yesButtonClicked(_ sender: UIButton) {
         handleAnswer(givenAnswer: true)
     }
     
-    @IBAction func noButtonClicked(_ sender: UIButton) {
+    @IBAction private func noButtonClicked(_ sender: UIButton) {
         handleAnswer(givenAnswer: false)
     }
     
@@ -100,7 +100,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         
         alertPresenter?.showAlert(with: model)
     }
-    
+  
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
         return QuizStepViewModel(
             image: UIImage(data: model.image) ?? UIImage(),
@@ -129,7 +129,7 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         imageView.layer.masksToBounds = true
         imageView.layer.borderWidth = Constants.borderWidth
         imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
-        
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             guard let self = self else { return }
             self.imageView.layer.borderColor = UIColor.clear.cgColor
@@ -169,22 +169,19 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
             questionFactory?.requestNextQuestion()
         }
     }
-    
+   //изменил  showAlert
     private func showAlert(quizResult result: QuizResultsViewModel) {
-        let alert = UIAlertController(
+        let alertModel = AlertModel(
             title: result.title,
             message: result.text,
-            preferredStyle: .alert
-        )
-        
-        let action = UIAlertAction(title: result.buttonText, style: .default) { [weak self] _ in
+            buttonText: result.buttonText
+        ) { [weak self] in
             guard let self = self else { return }
             self.currentQuestionIndex = 0
             self.correctAnswers = 0
             self.questionFactory?.requestNextQuestion()
         }
-        
-        alert.addAction(action)
-        present(alert, animated: true, completion: nil)
+
+        alertPresenter?.showAlert(with: alertModel)
     }
 }
