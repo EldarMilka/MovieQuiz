@@ -2,10 +2,17 @@ import UIKit
 
 final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     
+    private enum Constants {
+        static let cornerRadius: CGFloat = 20
+        static let borderWidth: CGFloat = 8
+        static let resultDateFormat = "dd.MM.yy HH:mm"
+    }
+    
     // MARK: - Outlets
     @IBOutlet weak var textLabel: UILabel!
     @IBOutlet weak var counterLabel: UILabel!
     @IBOutlet weak var imageView: UIImageView!
+    @IBOutlet weak var activityIndicator: UIActivityIndicatorView!
     
     // MARK: - Properties
     private var currentQuestionIndex = 0
@@ -15,31 +22,51 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private var currentQuestion: QuizQuestion?
     private var alertPresenter: AlertPresenter?
     private let statisticService: StatisticServiceProtocol = StatisticService()
-
+    
     // MARK: - Lifecycle
-    override func viewDidLoad() {
+   override func viewDidLoad() {
         super.viewDidLoad()
         
-        let factory = QuestionFactory()
-        factory.setup(delegate: self)
-        questionFactory = factory
-        
         alertPresenter = AlertPresenter(viewController: self)
-        questionFactory?.requestNextQuestion()
         
-        configureImageView()
+        imageView.layer.cornerRadius = Constants.cornerRadius
+        questionFactory = QuestionFactory(moviesLoader: MoviesLoader(), delegate: self)
+        
+        showLoadingIndicator()
+        questionFactory?.loadData()
+    }
+  
+    private func hideLoadingIndicator() {
+        activityIndicator.stopAnimating()
+        activityIndicator.isHidden = true
+    }
     
+    func didLoadDataFromServer() {
+        hideLoadingIndicator()
+        questionFactory?.requestNextQuestion()
+    }
+    
+    func didFailToLoadData(with error: Error) {
+        hideLoadingIndicator()
+        showNetworkError(message: error.localizedDescription)
     }
     
     // MARK: - QuestionFactoryDelegate
     func didReceiveNextQuestion(question: QuizQuestion?) {
-        guard let question = question else { return }
+        guard let question else {
+            showNetworkError(message: "Вопрос не загружен")
+            return
+        }
         currentQuestion = question
         let viewModel = convert(model: question)
-        
         DispatchQueue.main.async { [weak self] in
             self?.showQuizStep(quiz: viewModel)
         }
+    }
+    
+    func didFailToLoadImage(with error: Error) {
+        hideLoadingIndicator()
+        showNetworkError(message: "Не удалось загрузить изображение: \(error.localizedDescription)")
     }
     
     // MARK: - Actions
@@ -52,17 +79,31 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     }
     
     // MARK: - Logic
-    //Добавил для упрощения
-    private func configureImageView() {
-        imageView.layer.masksToBounds = true
-        imageView.layer.borderWidth = 8
-        imageView.layer.borderColor = UIColor.clear.cgColor
+    private func showLoadingIndicator() {
+        activityIndicator.isHidden = false
+        activityIndicator.startAnimating()
     }
     
-    
+    private func showNetworkError(message: String) {
+        hideLoadingIndicator()
+        
+        let model = AlertModel(title: "Ошибка",
+                               message: message,
+                               buttonText: "Попробовать еще раз") { [weak self] in
+            guard let self = self else { return }
+            
+            self.currentQuestionIndex = 0
+            self.correctAnswers = 0
+            
+            self.questionFactory?.loadData()
+        }
+        
+        alertPresenter?.showAlert(with: model)
+    }
+  
     private func convert(model: QuizQuestion) -> QuizStepViewModel {
-        QuizStepViewModel(
-            image: UIImage(named: model.image) ?? UIImage(),
+        return QuizStepViewModel(
+            image: UIImage(data: model.image) ?? UIImage(),
             question: model.text,
             questionNumber: "\(currentQuestionIndex + 1)/\(questionsAmount)"
         )
@@ -84,7 +125,9 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
         if isCorrect {
             correctAnswers += 1
         }
-// изменил 
+        
+        imageView.layer.masksToBounds = true
+        imageView.layer.borderWidth = Constants.borderWidth
         imageView.layer.borderColor = isCorrect ? UIColor.ypGreen.cgColor : UIColor.ypRed.cgColor
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
@@ -97,24 +140,24 @@ final class MovieQuizViewController: UIViewController, QuestionFactoryDelegate {
     private func showNextQuestionOrResults() {
         if currentQuestionIndex == questionsAmount - 1 {
             statisticService.store(correct: correctAnswers, total: questionsAmount)
-
+            
             let bestGame = statisticService.bestGame
             let totalPlays = statisticService.gamesCount
             let accuracy = String(format: "%.2f", statisticService.totalAccuracy)
-
+            
             // Форматирование даты с использованием DateFormatter
             let dateFormatter = DateFormatter()
             dateFormatter.dateStyle = .short
             dateFormatter.timeStyle = .short
             let bestGameDate = dateFormatter.string(from: bestGame.date)
-
+            
             let resultText = """
-            Ваш результат: \(correctAnswers)/\(questionsAmount)
-            Количество сыгранных квизов: \(totalPlays)
-            Рекорд: \(bestGame.correct)/\(bestGame.total) (\(bestGameDate))
-            Средняя точность: \(accuracy)%
-            """
-
+                    Ваш результат: \(correctAnswers)/\(questionsAmount)
+                    Количество сыгранных квизов: \(totalPlays)
+                    Рекорд: \(bestGame.correct)/\(bestGame.total) (\(bestGameDate))
+                    Средняя точность: \(accuracy)%
+                    """
+            
             let viewModel = QuizResultsViewModel(
                 title: "Раунд окончен!",
                 text: resultText,

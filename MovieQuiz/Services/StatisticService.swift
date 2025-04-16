@@ -18,9 +18,7 @@ final class StatisticService: StatisticServiceProtocol {
         case totalQuestions
     }
     
-    
     private let storage: UserDefaults = .standard
-    
     
     var gamesCount: Int {
         get {
@@ -30,7 +28,6 @@ final class StatisticService: StatisticServiceProtocol {
             storage.set(newValue, forKey: Keys.gamesCount.rawValue)
         }
     }
-    
     
     var bestGame: GameResult {
         get {
@@ -46,8 +43,6 @@ final class StatisticService: StatisticServiceProtocol {
             storage.set(newValue.date, forKey: Keys.bestGameDate.rawValue)
         }
     }
-    
-
     
     private var correctAnswers: Int {
         get {
@@ -86,18 +81,15 @@ final class StatisticService: StatisticServiceProtocol {
         if newGame.isBetter(than: bestGame) {
             bestGame = newGame
         }
-        
-        
     }
 }
 
 extension GameResult {
     func isBetter(than other: GameResult) -> Bool {
-           return self.accuracy > other.accuracy
-       }
-
-       var accuracy: Double {
-           guard total > 0 else { return 0 }
-           return Double(correct) / Double(total)
-       }
-   }
+        return self.accuracy > other.accuracy
+    }
+    var accuracy: Double {
+        guard total > 0 else { return 0 }
+        return Double(correct) / Double(total)
+    }
+}
